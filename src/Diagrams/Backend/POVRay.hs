@@ -38,6 +38,11 @@ data POVRay = POVRay
 type instance V POVRay = V3
 type instance N POVRay = Double
 
+instance Semigroup (Render POVRay V3 Double) where
+  (<>) = mappend
+
+
+
 instance Monoid (Render POVRay V3 Double) where
   mempty  = Pov []
   (Pov i1) `mappend` (Pov i2) = Pov (i1 ++ i2)

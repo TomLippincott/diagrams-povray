@@ -17,15 +17,28 @@
 --
 -----------------------------------------------------------------------------
 module Diagrams.Backend.POVRay.Syntax where
-
+--import Prelude hiding ((<>), (<+>))
 import           Diagrams.ThreeD.Types
 
 import           Text.PrettyPrint.HughesPJ
+import qualified Text.PrettyPrint.HughesPJ as HPJ
 
 import           Control.Lens
+--import Data.Semigroup hiding (Last, getLast)
+import           Data.Monoid  --hiding ((<>))
+import Data.Semigroup hiding (Last, getLast)
 
-import           Data.Monoid hiding ((<>))
+instance Semigroup TFinish where
+  (<>) = mappend
+  
+instance Semigroup ObjectModifier where
+  (<>) = mappend
+  
+instance Semigroup Texture where
+  (<>) = mappend
 
+
+  
 ------------------------------------------------------------
 -- Pretty-printing
 ------------------------------------------------------------
@@ -44,7 +57,7 @@ class SDL p where
 --   > }
 --
 block :: String -> [Doc] -> Doc
-block label items = text label <+> lbrace $$ nest 4 (vcat items) $$ rbrace
+block label items = text label HPJ.<+> lbrace $$ nest 4 (vcat items) $$ rbrace
 
 instance SDL String where
   toSDL = text
@@ -68,12 +81,12 @@ type Identifier = String
 type Vector = V3 Double
 
 instance SDL Vector where
-  toSDL (V3 x y z) = text "<" <> hsep (punctuate comma (map toSDL [x,y,z])) <> text ">"
+  toSDL (V3 x y z) = text "<" HPJ.<> hsep (punctuate comma (map toSDL [x,y,z])) HPJ.<> text ">"
 
 newtype VColor = RGB Vector deriving (Show, Eq)
 
 instance SDL VColor where
-  toSDL (RGB v) = text "rgb" <+> toSDL v
+  toSDL (RGB v) = text "rgb" HPJ.<+> toSDL v
 
 ------------------------------------------------------------
 -- Scene items
@@ -117,19 +130,19 @@ instance SDL CameraType where
   toSDL Orthographic = text "orthographic"
 
 instance SDL CameraVector where
-  toSDL (CVLocation v)  = text "location"  <+> toSDL v
-  toSDL (CVRight v)     = text "right"     <+> toSDL v
-  toSDL (CVUp v)        = text "up"        <+> toSDL v
-  toSDL (CVDirection v) = text "direction" <+> toSDL v
-  toSDL (CVSky v)       = text "sky"       <+> toSDL v
+  toSDL (CVLocation v)  = text "location"  HPJ.<+> toSDL v
+  toSDL (CVRight v)     = text "right"     HPJ.<+> toSDL v
+  toSDL (CVUp v)        = text "up"        HPJ.<+> toSDL v
+  toSDL (CVDirection v) = text "direction" HPJ.<+> toSDL v
+  toSDL (CVSky v)       = text "sky"       HPJ.<+> toSDL v
 
 data CameraModifier = CMLookAt Vector
                     | CMAngle Double -- degrees
                     deriving Show
 
 instance SDL CameraModifier where
-  toSDL (CMLookAt v) = text "look_at" <+> toSDL v
-  toSDL (CMAngle  d) = text "angle" <+> toSDL d
+  toSDL (CMLookAt v) = text "look_at" HPJ.<+> toSDL v
+  toSDL (CMAngle  d) = text "angle" HPJ.<+> toSDL d
 
 ------------------------------------------------------------
 -- Objects
@@ -164,8 +177,8 @@ data TMatrix = TMatrix [Double]
 
 instance SDL TMatrix where
   toSDL (TMatrix ds) = text "matrix <"
-                       <> (hcat . punctuate comma . map toSDL $ ds)
-                       <> text ">"
+                       HPJ.<> (hcat . punctuate comma . map toSDL $ ds)
+                       HPJ.<> text ">"
 
 -- May support more pigment & texture options in the future.
 data Texture = Texture (Last VColor) TFinish
@@ -191,7 +204,7 @@ instance Monoid TFinish where
 lastToSDL :: SDL a => String -> Last a -> Doc
 lastToSDL s x = case getLast x of
   Nothing -> mempty
-  Just x' -> text s <+> toSDL x'
+  Just x' -> text s HPJ.<+> toSDL x'
 
 instance SDL Texture where
   toSDL t | t == mempty = mempty
@@ -223,13 +236,13 @@ data FiniteSolid = Sphere Vector Double ObjectModifier
 
 instance SDL FiniteSolid where
   toSDL (Sphere c r mods) = block "sphere" [cr,  toSDL mods]
-    where cr = toSDL c <> comma <+> toSDL r
+    where cr = toSDL c HPJ.<> comma HPJ.<+> toSDL r
   toSDL (Box p1 p2 mods) = block "box" [corners, toSDL mods]
-    where corners = toSDL p1 <> comma <+> toSDL p2
+    where corners = toSDL p1 HPJ.<> comma HPJ.<+> toSDL p2
   toSDL (Cone p1 r1 p2 r2 o mods) = block "cone" [geom, open, toSDL mods] where
     open = if o then text " open" else empty
-    geom = toSDL p1 <> comma <+> toSDL r1 <> comma <+>
-           toSDL p2 <> comma <+> toSDL r2
+    geom = toSDL p1 HPJ.<> comma HPJ.<+> toSDL r1 HPJ.<> comma HPJ.<+>
+           toSDL p2 HPJ.<> comma HPJ.<+> toSDL r2
   toSDL (Union solids mods) =
       block "union" $ map toSDL solids ++ [toSDL mods]
   toSDL (Merge solids mods) =
@@ -248,13 +261,13 @@ data LightSource = LightSource Vector VColor [LightModifier]
 
 instance SDL LightSource where
   toSDL (LightSource loc c mods) = block "light_source" (lc : map toSDL mods)
-    where lc = toSDL loc <> comma <+> toSDL c
+    where lc = toSDL loc HPJ.<> comma HPJ.<+> toSDL c
 
 data LightModifier = Parallel Vector
                    deriving Show
 
 instance SDL LightModifier where
-    toSDL (Parallel v) = text "parallel" $$ text "point_at" <+> toSDL v
+    toSDL (Parallel v) = text "parallel" $$ text "point_at" HPJ.<+> toSDL v
 
 makePrisms ''SceneItem
 makePrisms ''Object
